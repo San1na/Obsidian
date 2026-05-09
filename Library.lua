@@ -6079,6 +6079,279 @@ do
         return DepGroupbox
     end
 
+    function Funcs:AddESPPreview(Idx, Info)
+        Info = Info or {}
+
+        local Groupbox = self
+        local Container = Groupbox.Container
+
+        local CanvasHeight = Info.Height or 188
+
+        local DefaultElements = {
+            { Idx = "Name",       Text = "Player",  DefaultX = 0.5,   DefaultY = -0.07 },
+            { Idx = "Health",     Text = "100",     DefaultX = -0.18, DefaultY = 0.5   },
+            { Idx = "Weapon",     Text = "Weapon",  DefaultX = 0.5,   DefaultY = 1.05  },
+            { Idx = "WeaponIcon", Text = "[Icon]",  DefaultX = 0.5,   DefaultY = 1.16  },
+            { Idx = "Distance",   Text = "12m",     DefaultX = 0.5,   DefaultY = 1.27  },
+            { Idx = "Flags",      Text = "ZOOM",    DefaultX = 1.05,  DefaultY = 0.0   },
+        }
+        local Elements = Info.Elements or DefaultElements
+
+        local Preview = {
+            Idx = Idx,
+            Value = {},
+            Default = {},
+            Elements = Elements,
+            Visible = true,
+            Callback = Info.Callback,
+            Changed = nil,
+            Type = "ESPLayout",
+        }
+
+        for _, El in ipairs(Elements) do
+            Preview.Default[El.Idx] = { X = El.DefaultX, Y = El.DefaultY }
+            Preview.Value[El.Idx]   = { X = El.DefaultX, Y = El.DefaultY }
+        end
+
+        local Holder = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, CanvasHeight),
+            Parent = Container,
+        })
+
+        local Canvas = New("Frame", {
+            BackgroundColor3 = "MainColor",
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 1, 0),
+            ClipsDescendants = false,
+            Parent = Holder,
+        })
+        table.insert(Library.Corners, New("UICorner", {
+            CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+            Parent = Canvas,
+        }))
+        Library:AddOutline(Canvas)
+
+        local function GetBoxRect()
+            local cw = math.max(Canvas.AbsoluteSize.X, 1)
+            local ch = math.max(Canvas.AbsoluteSize.Y, 1)
+            local bw = math.clamp(cw * 0.30, 50, 90)
+            local bh = math.clamp(ch * 0.70, 90, 150)
+            local bx = (cw - bw) / 2
+            local by = (ch - bh) / 2
+            return bx, by, bw, bh
+        end
+
+        local BoxFrame = New("Frame", {
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Parent = Canvas,
+        })
+        New("UIStroke", {
+            Color = "AccentColor",
+            Transparency = 0.4,
+            Thickness = 1,
+            Parent = BoxFrame,
+        })
+
+        local Head = New("Frame", {
+            BackgroundColor3 = "FontColor",
+            BackgroundTransparency = 0.5,
+            BorderSizePixel = 0,
+            Parent = BoxFrame,
+        })
+        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Head })
+
+        local Body = New("Frame", {
+            BackgroundColor3 = "FontColor",
+            BackgroundTransparency = 0.6,
+            BorderSizePixel = 0,
+            Parent = BoxFrame,
+        })
+        table.insert(Library.Corners, New("UICorner", {
+            CornerRadius = UDim.new(0, 3),
+            Parent = Body,
+        }))
+
+        local function UpdateBoxLayout()
+            local bx, by, bw, bh = GetBoxRect()
+            BoxFrame.Position = UDim2.fromOffset(math.floor(bx), math.floor(by))
+            BoxFrame.Size = UDim2.fromOffset(math.floor(bw), math.floor(bh))
+            local headSize = math.floor(bw * 0.38)
+            Head.Size = UDim2.fromOffset(headSize, headSize)
+            Head.Position = UDim2.new(0.5, -math.floor(headSize / 2), 0, math.floor(bh * 0.05))
+            local bodyW = math.floor(bw * 0.6)
+            local bodyH = math.floor(bh * 0.55)
+            Body.Size = UDim2.fromOffset(bodyW, bodyH)
+            Body.Position = UDim2.new(0.5, -math.floor(bodyW / 2), 0, math.floor(bh * 0.45))
+        end
+
+        Preview.Labels = {}
+
+        local function PositionLabel(elIdx)
+            local lbl = Preview.Labels[elIdx]
+            if not lbl then return end
+            local v = Preview.Value[elIdx]
+            local bx, by, bw, bh = GetBoxRect()
+            local x = bx + v.X * bw
+            local y = by + v.Y * bh
+            local sz = lbl.Frame.AbsoluteSize
+            lbl.Frame.Position = UDim2.fromOffset(
+                math.floor(x - sz.X / 2),
+                math.floor(y - sz.Y / 2)
+            )
+        end
+
+        for _, El in ipairs(Elements) do
+            local LabelFrame = New("TextButton", {
+                AutoButtonColor = false,
+                BackgroundColor3 = "BackgroundColor",
+                BackgroundTransparency = 0.15,
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                Size = UDim2.fromOffset(0, 0),
+                Text = "",
+                ZIndex = 5,
+                Parent = Canvas,
+            })
+            New("UIPadding", {
+                PaddingLeft = UDim.new(0, 5),
+                PaddingRight = UDim.new(0, 5),
+                PaddingTop = UDim.new(0, 2),
+                PaddingBottom = UDim.new(0, 2),
+                Parent = LabelFrame,
+            })
+            New("UICorner", { CornerRadius = UDim.new(0, 3), Parent = LabelFrame })
+            local Stroke = New("UIStroke", {
+                Color = "AccentColor",
+                Transparency = 1,
+                Thickness = 1,
+                Parent = LabelFrame,
+            })
+            local TextLbl = New("TextLabel", {
+                BackgroundTransparency = 1,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                Size = UDim2.fromOffset(0, 0),
+                Text = El.Text or El.Idx,
+                TextSize = 11,
+                TextColor3 = "FontColor",
+                Parent = LabelFrame,
+            })
+
+            Preview.Labels[El.Idx] = { Frame = LabelFrame, Text = TextLbl, Stroke = Stroke }
+
+            local Dragging = false
+            local DragOffset = Vector2.zero
+
+            LabelFrame.InputBegan:Connect(function(Input)
+                if not IsClickInput(Input) then return end
+                Dragging = true
+                local mp = UserInputService:GetMouseLocation()
+                local center = LabelFrame.AbsolutePosition + LabelFrame.AbsoluteSize / 2
+                DragOffset = center - mp
+                Stroke.Transparency = 0
+            end)
+
+            Library:GiveSignal(UserInputService.InputEnded:Connect(function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1
+                    or Input.UserInputType == Enum.UserInputType.Touch then
+                    if Dragging then
+                        Stroke.Transparency = 1
+                    end
+                    Dragging = false
+                end
+            end))
+
+            Library:GiveSignal(UserInputService.InputChanged:Connect(function(Input)
+                if not Dragging then return end
+                if not IsHoverInput(Input) then return end
+                local mp = UserInputService:GetMouseLocation()
+                local center = mp + DragOffset
+                local cAbs = Canvas.AbsolutePosition
+                local lx = center.X - cAbs.X
+                local ly = center.Y - cAbs.Y
+                local bx, by, bw, bh = GetBoxRect()
+                local rx = (lx - bx) / bw
+                local ry = (ly - by) / bh
+                rx = math.clamp(rx, -2.5, 3.5)
+                ry = math.clamp(ry, -1.5, 2.5)
+                Preview.Value[El.Idx].X = rx
+                Preview.Value[El.Idx].Y = ry
+                PositionLabel(El.Idx)
+                Library:SafeCallback(Preview.Callback, Preview.Value)
+                Library:SafeCallback(Preview.Changed, Preview.Value)
+            end))
+
+            LabelFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                PositionLabel(El.Idx)
+            end)
+        end
+
+        local function RefreshAll()
+            UpdateBoxLayout()
+            for _, El in ipairs(Elements) do
+                PositionLabel(El.Idx)
+            end
+        end
+
+        UpdateBoxLayout()
+        Canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(RefreshAll)
+        task.defer(RefreshAll)
+
+        function Preview:GetOffset(name)
+            local v = self.Value[name]
+            if not v then return 0.5, 0.5 end
+            return v.X, v.Y
+        end
+
+        function Preview:GetPosition(name, boxX, boxY, boxW, boxH)
+            local rx, ry = self:GetOffset(name)
+            return boxX + rx * boxW, boxY + ry * boxH
+        end
+
+        function Preview:SetValue(t)
+            if typeof(t) ~= "table" then return end
+            for k, v in pairs(t) do
+                if self.Value[k] and typeof(v) == "table" and tonumber(v.X) and tonumber(v.Y) then
+                    self.Value[k].X = tonumber(v.X)
+                    self.Value[k].Y = tonumber(v.Y)
+                end
+            end
+            RefreshAll()
+            Library:SafeCallback(self.Callback, self.Value)
+            Library:SafeCallback(self.Changed, self.Value)
+        end
+
+        function Preview:Reset()
+            for k, v in pairs(self.Default) do
+                self.Value[k].X = v.X
+                self.Value[k].Y = v.Y
+            end
+            RefreshAll()
+            Library:SafeCallback(self.Callback, self.Value)
+            Library:SafeCallback(self.Changed, self.Value)
+        end
+
+        function Preview:OnChanged(Func)
+            self.Changed = Func
+        end
+
+        function Preview:SetVisible(Visible)
+            self.Visible = Visible
+            Holder.Visible = Visible
+            Groupbox:Resize()
+        end
+
+        Preview.Holder = Holder
+        Preview.Canvas = Canvas
+        table.insert(Groupbox.Elements, Preview)
+        Options[Idx] = Preview
+
+        Groupbox:Resize()
+
+        return Preview
+    end
+
     BaseGroupbox.__index = Funcs
     BaseGroupbox.__namecall = function(_, Key, ...)
         return Funcs[Key](...)
