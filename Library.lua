@@ -6142,41 +6142,60 @@ do
             return bx, by, bw, bh
         end
 
-        --// Character model (R6 dummy) \\--
-        local function BuildDummy()
+        --// Try to clone real BloxStrike T character from ReplicatedStorage \\--
+        local function BuildFallbackDummy()
             local model = Instance.new("Model")
             model.Name = "PreviewDummy"
-
-            local function mkPart(name, size, color, cf, parent)
+            local function mkPart(name, size, color, cf)
                 local p = Instance.new("Part")
-                p.Name = name
-                p.Size = size
-                p.Color = color
-                p.Anchored = true
-                p.CanCollide = false
+                p.Name = name; p.Size = size; p.Color = color
+                p.Anchored = true; p.CanCollide = false
                 p.Material = Enum.Material.SmoothPlastic
                 p.TopSurface = Enum.SurfaceType.Smooth
                 p.BottomSurface = Enum.SurfaceType.Smooth
-                p.CFrame = cf
-                p.Parent = parent or model
+                p.CFrame = cf; p.Parent = model
                 return p
             end
-
-            local skin  = Color3.fromRGB(255, 226, 117)
+            local skin = Color3.fromRGB(255, 226, 117)
             local shirt = Color3.fromRGB(45, 80, 170)
             local pants = Color3.fromRGB(30, 30, 40)
-
-            mkPart("Torso",    Vector3.new(2, 2, 1),     shirt, CFrame.new(0, 3, 0))
+            mkPart("Torso",    Vector3.new(2, 2, 1),       shirt, CFrame.new(0, 3, 0))
             local head = mkPart("Head", Vector3.new(1.2, 1.2, 1.2), skin, CFrame.new(0, 4.6, 0))
             local face = Instance.new("Decal")
             face.Texture = "rbxasset://textures/face.png"
-            face.Face = Enum.NormalId.Front
-            face.Parent = head
+            face.Face = Enum.NormalId.Front; face.Parent = head
             mkPart("LeftArm",  Vector3.new(1, 2, 1), skin,  CFrame.new(-1.5, 3, 0))
             mkPart("RightArm", Vector3.new(1, 2, 1), skin,  CFrame.new(1.5, 3, 0))
             mkPart("LeftLeg",  Vector3.new(1, 2, 1), pants, CFrame.new(-0.5, 1, 0))
             mkPart("RightLeg", Vector3.new(1, 2, 1), pants, CFrame.new(0.5, 1, 0))
+            return model
+        end
 
+        local function TryGetTCharacter()
+            local model = nil
+            pcall(function()
+                local RS = game:GetService("ReplicatedStorage")
+                -- Method 1: via the game's own Viewport config (same path used by Loadout/BuyMenu)
+                local ok, viewCfg = pcall(require, RS.Database.Custom.GameStats.Character.Viewport)
+                if ok and viewCfg then
+                    local tConf = viewCfg.VIEWPORT_CHARACTER_CONFIG and viewCfg.VIEWPORT_CHARACTER_CONFIG["T"]
+                    if tConf and tConf.Character then
+                        local src = RS.Assets.Characters:FindFirstChild(tConf.Character)
+                        if src then model = src:Clone(); return end
+                    end
+                end
+                -- Method 2: iterate Assets.Characters, prefer non-CT models
+                local chars = RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild("Characters")
+                if chars then
+                    for _, ch in ipairs(chars:GetChildren()) do
+                        if ch:IsA("Model") and not ch.Name:lower():find("ct") then
+                            model = ch:Clone(); return
+                        end
+                    end
+                    local first = chars:GetChildren()[1]
+                    if first and first:IsA("Model") then model = first:Clone() end
+                end
+            end)
             return model
         end
 
@@ -6224,7 +6243,7 @@ do
         BoxGradient.Enabled = false
         BoxGradient.Parent = BoxStroke
 
-        --// ViewportFrame with R6 dummy (rendered inside BoxFrame) \\--
+        --// ViewportFrame with real BloxStrike T character (WorldModel approach) \\--
         local CharViewport = New("ViewportFrame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -6232,15 +6251,35 @@ do
             Position = UDim2.fromScale(0, 0),
             ZIndex = 3,
             Parent = BoxFrame,
-            LightDirection = Vector3.new(-0.3, -1, -0.5),
-            Ambient = Color3.fromRGB(200, 200, 210),
-            LightColor = Color3.fromRGB(255, 255, 245),
+            LightDirection = Vector3.new(0.3, -0.8, -0.5),
+            Ambient = Color3.fromRGB(160, 160, 170),
+            LightColor = Color3.fromRGB(255, 252, 240),
         })
-        local DummyModel = BuildDummy()
-        DummyModel.Parent = CharViewport
+        local CharWorldModel = Instance.new("WorldModel")
+        CharWorldModel.Parent = CharViewport
+        local CharModel = TryGetTCharacter() or BuildFallbackDummy()
+        local UsingRealModel = CharModel.Name ~= "PreviewDummy"
+        CharModel.Parent = CharWorldModel
+        -- Anchor all parts (required for WorldModel display without physics)
+        for _, desc in ipairs(CharModel:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.Anchored = true
+            end
+        end
+        -- Apply character offset matching the game's Viewport config
+        local CharOffset = CFrame.new(0, 0.025, 0.4)
+        pcall(function()
+            if CharModel.PrimaryPart then
+                CharModel:SetPrimaryPartCFrame(CharOffset)
+            else
+                CharModel:PivotTo(CharOffset)
+            end
+        end)
         local PreviewCam = Instance.new("Camera")
-        PreviewCam.FieldOfView = 40
-        PreviewCam.CFrame = CFrame.new(Vector3.new(0, 3, 11.5), Vector3.new(0, 2.6, 0))
+        PreviewCam.CameraType = Enum.CameraType.Scriptable
+        -- Camera offset from game's Viewport config: z=-8, rotated pi (facing the character)
+        PreviewCam.FieldOfView = UsingRealModel and 55 or 40
+        PreviewCam.CFrame = CFrame.new(0, 0.2, -8) * CFrame.Angles(0, math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
