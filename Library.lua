@@ -6088,11 +6088,11 @@ do
         local CanvasHeight = Info.Height or 220
 
         local DefaultElements = {
-            { Idx = "Name",       Text = "Player",  DefaultX = 0.5,   DefaultY = -0.07 },
-            { Idx = "Weapon",     Text = "Weapon",  DefaultX = 0.5,   DefaultY = 1.03  },
-            { Idx = "WeaponIcon", Text = "[Icon]",  DefaultX = 0.5,   DefaultY = 1.12  },
-            { Idx = "Distance",   Text = "12m",     DefaultX = 0.5,   DefaultY = 1.21  },
-            { Idx = "Flags",      Text = "ZOOM",    DefaultX = 1.08,  DefaultY = 0.0   },
+            { Idx = "Name",       Text = "Player",  DefaultX = 0.5,   DefaultY = -0.10 },
+            { Idx = "Weapon",     Text = "AK-47",   DefaultX = 0.5,   DefaultY = 1.05  },
+            { Idx = "WeaponIcon", Text = "[Icon]",  DefaultX = 0.5,   DefaultY = 1.20  },
+            { Idx = "Distance",   Text = "24m",     DefaultX = 0.5,   DefaultY = 1.31  },
+            { Idx = "Flags",      Text = "ZOOM",    DefaultX = 1.15,  DefaultY = 0.0   },
         }
         local Elements = Info.Elements or DefaultElements
 
@@ -6279,7 +6279,7 @@ do
         PreviewCam.CameraType = Enum.CameraType.Scriptable
         -- z=-4 + FOV=72: visible height = 2*tan(36°)*4 = 5.82 studs
         -- covers full R6 character (5 studs) centered at y=0 with room to spare
-        PreviewCam.FieldOfView = 72
+        PreviewCam.FieldOfView = 65
         PreviewCam.CFrame = CFrame.new(0, 0, -4) * CFrame.Angles(0, math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
