@@ -6286,6 +6286,8 @@ do
 
         local function UpdateBoxLayout()
             local bx, by, bw, bh = GetBoxRect()
+            Preview.RefW = bw
+            Preview.RefH = bh
             local ox, oy = math.floor(bx), math.floor(by)
             local ow, oh = math.floor(bw), math.floor(bh)
             BoxOutlineFrame.Position = UDim2.fromOffset(ox - 1, oy - 1)
@@ -6434,7 +6436,26 @@ do
 
         function Preview:GetPosition(name, boxX, boxY, boxW, boxH)
             local rx, ry = self:GetOffset(name)
-            return boxX + rx * boxW, boxY + ry * boxH
+            -- Outside-box labels use a fixed pixel offset (based on the preview reference
+            -- box size) so they stay the same distance from the box at any in-game range.
+            local refW = self.RefW or 95
+            local refH = self.RefH or 115
+            local px, py
+            if rx < 0 then
+                px = boxX + rx * refW
+            elseif rx > 1 then
+                px = boxX + boxW + (rx - 1) * refW
+            else
+                px = boxX + rx * boxW
+            end
+            if ry < 0 then
+                py = boxY + ry * refH
+            elseif ry > 1 then
+                py = boxY + boxH + (ry - 1) * refH
+            else
+                py = boxY + ry * boxH
+            end
+            return px, py
         end
 
         function Preview:SetValue(t)
