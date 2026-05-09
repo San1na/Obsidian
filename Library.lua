@@ -6134,8 +6134,9 @@ do
         local function GetBoxRect()
             local cw = math.max(Canvas.AbsoluteSize.X, 1)
             local ch = math.max(Canvas.AbsoluteSize.Y, 1)
-            local bw = math.clamp(cw * 0.32, 50, 110)
-            local bh = math.clamp(ch * 0.68, 90, 170)
+            -- Real ESP box ratio: character hitbox is 4w x 4.8h studs = 0.833
+            local bh = math.clamp(ch * 0.46, 75, 115)
+            local bw = math.clamp(math.floor(bh * 0.833), 60, 100)
             local bx = (cw - bw) / 2
             local by = (ch - bh) / 2
             return bx, by, bw, bh
@@ -6265,23 +6266,21 @@ do
                 desc.Anchored = true
             end
         end
-        -- Center character using bounding box (same technique as BuyMenu)
+        -- Position character: PivotTo uses PrimaryPart when set, bbox center otherwise
+        -- Both produce a known center at y=0 for the camera to look at
         pcall(function()
-            local bb, _ = CharModel:GetBoundingBox()
-            local offsetY = -bb.Y  -- move bounding box center to y=0
-            local cf = CFrame.new(0, offsetY, 0.4)
             if CharModel.PrimaryPart then
-                CharModel:SetPrimaryPartCFrame(cf)
+                CharModel:SetPrimaryPartCFrame(CFrame.new(0, 0, 0.4))
             else
-                CharModel:PivotTo(cf)
+                CharModel:PivotTo(CFrame.new(0, 0, 0.4))
             end
         end)
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
-        -- Camera at z=-5 (closer than game's z=-8) so character fills the box
-        -- y=0 centers on bounding box center; FOV=60 for good vertical fill
-        PreviewCam.FieldOfView = 60
-        PreviewCam.CFrame = CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0)
+        -- z=-4 + FOV=72: visible height = 2*tan(36°)*4 = 5.82 studs
+        -- covers full R6 character (5 studs) centered at y=0 with room to spare
+        PreviewCam.FieldOfView = 72
+        PreviewCam.CFrame = CFrame.new(0, 0, -4) * CFrame.Angles(0, math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
