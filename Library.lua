@@ -6089,11 +6089,10 @@ do
 
         local DefaultElements = {
             { Idx = "Name",       Text = "Player",  DefaultX = 0.5,   DefaultY = -0.07 },
-            { Idx = "Health",     Text = "100",     DefaultX = -0.18, DefaultY = 0.5   },
-            { Idx = "Weapon",     Text = "Weapon",  DefaultX = 0.5,   DefaultY = 1.05  },
-            { Idx = "WeaponIcon", Text = "[Icon]",  DefaultX = 0.5,   DefaultY = 1.16  },
-            { Idx = "Distance",   Text = "12m",     DefaultX = 0.5,   DefaultY = 1.27  },
-            { Idx = "Flags",      Text = "ZOOM",    DefaultX = 1.05,  DefaultY = 0.0   },
+            { Idx = "Weapon",     Text = "Weapon",  DefaultX = 0.5,   DefaultY = 1.03  },
+            { Idx = "WeaponIcon", Text = "[Icon]",  DefaultX = 0.5,   DefaultY = 1.12  },
+            { Idx = "Distance",   Text = "12m",     DefaultX = 0.5,   DefaultY = 1.21  },
+            { Idx = "Flags",      Text = "ZOOM",    DefaultX = 1.08,  DefaultY = 0.0   },
         }
         local Elements = Info.Elements or DefaultElements
 
