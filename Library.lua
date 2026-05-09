@@ -6085,7 +6085,7 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
-        local CanvasHeight = Info.Height or 188
+        local CanvasHeight = Info.Height or 220
 
         local DefaultElements = {
             { Idx = "Name",       Text = "Player",  DefaultX = 0.5,   DefaultY = -0.07 },
@@ -6135,55 +6135,125 @@ do
         local function GetBoxRect()
             local cw = math.max(Canvas.AbsoluteSize.X, 1)
             local ch = math.max(Canvas.AbsoluteSize.Y, 1)
-            local bw = math.clamp(cw * 0.30, 50, 90)
-            local bh = math.clamp(ch * 0.70, 90, 150)
+            local bw = math.clamp(cw * 0.32, 50, 110)
+            local bh = math.clamp(ch * 0.68, 90, 170)
             local bx = (cw - bw) / 2
             local by = (ch - bh) / 2
             return bx, by, bw, bh
         end
 
+        --// Character model (R6 dummy) \\--
+        local function BuildDummy()
+            local model = Instance.new("Model")
+            model.Name = "PreviewDummy"
+
+            local function mkPart(name, size, color, cf, parent)
+                local p = Instance.new("Part")
+                p.Name = name
+                p.Size = size
+                p.Color = color
+                p.Anchored = true
+                p.CanCollide = false
+                p.Material = Enum.Material.SmoothPlastic
+                p.TopSurface = Enum.SurfaceType.Smooth
+                p.BottomSurface = Enum.SurfaceType.Smooth
+                p.CFrame = cf
+                p.Parent = parent or model
+                return p
+            end
+
+            local skin  = Color3.fromRGB(255, 226, 117)
+            local shirt = Color3.fromRGB(45, 80, 170)
+            local pants = Color3.fromRGB(30, 30, 40)
+
+            mkPart("Torso",    Vector3.new(2, 2, 1),     shirt, CFrame.new(0, 3, 0))
+            local head = mkPart("Head", Vector3.new(1.2, 1.2, 1.2), skin, CFrame.new(0, 4.6, 0))
+            local face = Instance.new("Decal")
+            face.Texture = "rbxasset://textures/face.png"
+            face.Face = Enum.NormalId.Front
+            face.Parent = head
+            mkPart("LeftArm",  Vector3.new(1, 2, 1), skin,  CFrame.new(-1.5, 3, 0))
+            mkPart("RightArm", Vector3.new(1, 2, 1), skin,  CFrame.new(1.5, 3, 0))
+            mkPart("LeftLeg",  Vector3.new(1, 2, 1), pants, CFrame.new(-0.5, 1, 0))
+            mkPart("RightLeg", Vector3.new(1, 2, 1), pants, CFrame.new(0.5, 1, 0))
+
+            return model
+        end
+
+        --// 2D Box matching real ESP structure \\--
+        local BoxOutlineFrame = New("Frame", {
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            Parent = Canvas,
+        })
+        local BoxOutlineStroke = Instance.new("UIStroke")
+        BoxOutlineStroke.Color = Color3.new(0, 0, 0)
+        BoxOutlineStroke.Thickness = 1
+        BoxOutlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        BoxOutlineStroke.LineJoinMode = Enum.LineJoinMode.Miter
+        BoxOutlineStroke.Parent = BoxOutlineFrame
+
+        local BoxFillFrame = New("Frame", {
+            BackgroundColor3 = Color3.fromRGB(255, 88, 88),
+            BackgroundTransparency = 0.85,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            Parent = Canvas,
+        })
+        local BoxFillGradient = Instance.new("UIGradient")
+        BoxFillGradient.Rotation = 90
+        BoxFillGradient.Enabled = false
+        BoxFillGradient.Parent = BoxFillFrame
+
         local BoxFrame = New("Frame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
+            ZIndex = 4,
+            ClipsDescendants = false,
             Parent = Canvas,
         })
-        New("UIStroke", {
-            Color = "AccentColor",
-            Transparency = 0.4,
-            Thickness = 1,
-            Parent = BoxFrame,
-        })
+        local BoxStroke = Instance.new("UIStroke")
+        BoxStroke.Color = Color3.new(1, 1, 1)
+        BoxStroke.Thickness = 1
+        BoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        BoxStroke.LineJoinMode = Enum.LineJoinMode.Miter
+        BoxStroke.Parent = BoxFrame
+        local BoxGradient = Instance.new("UIGradient")
+        BoxGradient.Rotation = 90
+        BoxGradient.Enabled = false
+        BoxGradient.Parent = BoxStroke
 
-        local Head = New("Frame", {
-            BackgroundColor3 = "FontColor",
-            BackgroundTransparency = 0.5,
+        --// ViewportFrame with R6 dummy (rendered inside BoxFrame) \\--
+        local CharViewport = New("ViewportFrame", {
+            BackgroundTransparency = 1,
             BorderSizePixel = 0,
+            Size = UDim2.fromScale(1, 1),
+            Position = UDim2.fromScale(0, 0),
+            ZIndex = 3,
             Parent = BoxFrame,
+            LightDirection = Vector3.new(-0.3, -1, -0.5),
+            Ambient = Color3.fromRGB(200, 200, 210),
+            LightColor = Color3.fromRGB(255, 255, 245),
         })
-        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Head })
-
-        local Body = New("Frame", {
-            BackgroundColor3 = "FontColor",
-            BackgroundTransparency = 0.6,
-            BorderSizePixel = 0,
-            Parent = BoxFrame,
-        })
-        table.insert(Library.Corners, New("UICorner", {
-            CornerRadius = UDim.new(0, 3),
-            Parent = Body,
-        }))
+        local DummyModel = BuildDummy()
+        DummyModel.Parent = CharViewport
+        local PreviewCam = Instance.new("Camera")
+        PreviewCam.FieldOfView = 40
+        PreviewCam.CFrame = CFrame.new(Vector3.new(0, 3, 11.5), Vector3.new(0, 2.6, 0))
+        PreviewCam.Parent = CharViewport
+        CharViewport.CurrentCamera = PreviewCam
 
         local function UpdateBoxLayout()
             local bx, by, bw, bh = GetBoxRect()
-            BoxFrame.Position = UDim2.fromOffset(math.floor(bx), math.floor(by))
-            BoxFrame.Size = UDim2.fromOffset(math.floor(bw), math.floor(bh))
-            local headSize = math.floor(bw * 0.38)
-            Head.Size = UDim2.fromOffset(headSize, headSize)
-            Head.Position = UDim2.new(0.5, -math.floor(headSize / 2), 0, math.floor(bh * 0.05))
-            local bodyW = math.floor(bw * 0.6)
-            local bodyH = math.floor(bh * 0.55)
-            Body.Size = UDim2.fromOffset(bodyW, bodyH)
-            Body.Position = UDim2.new(0.5, -math.floor(bodyW / 2), 0, math.floor(bh * 0.45))
+            local ox, oy = math.floor(bx), math.floor(by)
+            local ow, oh = math.floor(bw), math.floor(bh)
+            BoxOutlineFrame.Position = UDim2.fromOffset(ox - 1, oy - 1)
+            BoxOutlineFrame.Size = UDim2.fromOffset(ow + 2, oh + 2)
+            BoxFrame.Position = UDim2.fromOffset(ox, oy)
+            BoxFrame.Size = UDim2.fromOffset(ow, oh)
+            BoxFillFrame.Position = UDim2.fromOffset(ox + 1, oy + 1)
+            BoxFillFrame.Size = UDim2.fromOffset(math.max(ow - 2, 1), math.max(oh - 2, 1))
         end
 
         Preview.Labels = {}
@@ -6205,23 +6275,14 @@ do
         for _, El in ipairs(Elements) do
             local LabelFrame = New("TextButton", {
                 AutoButtonColor = false,
-                BackgroundColor3 = "BackgroundColor",
-                BackgroundTransparency = 0.15,
+                BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.XY,
                 Size = UDim2.fromOffset(0, 0),
                 Text = "",
-                ZIndex = 5,
+                ZIndex = 8,
                 Parent = Canvas,
             })
-            New("UIPadding", {
-                PaddingLeft = UDim.new(0, 5),
-                PaddingRight = UDim.new(0, 5),
-                PaddingTop = UDim.new(0, 2),
-                PaddingBottom = UDim.new(0, 2),
-                Parent = LabelFrame,
-            })
-            New("UICorner", { CornerRadius = UDim.new(0, 3), Parent = LabelFrame })
             local Stroke = New("UIStroke", {
                 Color = "AccentColor",
                 Transparency = 1,
@@ -6234,14 +6295,41 @@ do
                 Size = UDim2.fromOffset(0, 0),
                 Text = El.Text or El.Idx,
                 TextSize = 11,
-                TextColor3 = "FontColor",
+                TextColor3 = Color3.fromRGB(235, 235, 245),
                 Parent = LabelFrame,
+                ZIndex = 9,
+            })
+            New("UIStroke", {
+                Color = Color3.new(0, 0, 0),
+                Thickness = 1,
+                Transparency = 0.2,
+                Parent = TextLbl,
             })
 
             Preview.Labels[El.Idx] = { Frame = LabelFrame, Text = TextLbl, Stroke = Stroke }
 
             local Dragging = false
+            local Hovering = false
             local DragOffset = Vector2.zero
+
+            local function UpdateStroke()
+                if Dragging then
+                    Stroke.Transparency = 0
+                elseif Hovering then
+                    Stroke.Transparency = 0.4
+                else
+                    Stroke.Transparency = 1
+                end
+            end
+
+            LabelFrame.MouseEnter:Connect(function()
+                Hovering = true
+                UpdateStroke()
+            end)
+            LabelFrame.MouseLeave:Connect(function()
+                Hovering = false
+                UpdateStroke()
+            end)
 
             LabelFrame.InputBegan:Connect(function(Input)
                 if not IsClickInput(Input) then return end
@@ -6249,16 +6337,16 @@ do
                 local mp = UserInputService:GetMouseLocation()
                 local center = LabelFrame.AbsolutePosition + LabelFrame.AbsoluteSize / 2
                 DragOffset = center - mp
-                Stroke.Transparency = 0
+                UpdateStroke()
             end)
 
             Library:GiveSignal(UserInputService.InputEnded:Connect(function(Input)
                 if Input.UserInputType == Enum.UserInputType.MouseButton1
                     or Input.UserInputType == Enum.UserInputType.Touch then
                     if Dragging then
-                        Stroke.Transparency = 1
+                        Dragging = false
+                        UpdateStroke()
                     end
-                    Dragging = false
                 end
             end))
 
@@ -6344,6 +6432,15 @@ do
 
         Preview.Holder = Holder
         Preview.Canvas = Canvas
+        Preview.BoxFrame = BoxFrame
+        Preview.BoxStroke = BoxStroke
+        Preview.BoxGradient = BoxGradient
+        Preview.BoxOutlineFrame = BoxOutlineFrame
+        Preview.BoxOutlineStroke = BoxOutlineStroke
+        Preview.BoxFillFrame = BoxFillFrame
+        Preview.BoxFillGradient = BoxFillGradient
+        Preview.Viewport = CharViewport
+        Preview.Dummy = DummyModel
         table.insert(Groupbox.Elements, Preview)
         Options[Idx] = Preview
 
