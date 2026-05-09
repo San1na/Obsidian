@@ -110,6 +110,21 @@ local SaveManager = {} do
                 end
             end,
         },
+        ESPLayout = {
+            Save = function(idx, object)
+                local data = {}
+                for k, v in pairs(object.Value) do
+                    data[k] = { X = v.X, Y = v.Y }
+                end
+                return { type = "ESPLayout", idx = idx, value = data }
+            end,
+            Load = function(idx, data)
+                local object = SaveManager.Library.Options[idx]
+                if object and type(data.value) == "table" then
+                    object:SetValue(data.value)
+                end
+            end,
+        },
     }
 
     function SaveManager:SetLibrary(library)
