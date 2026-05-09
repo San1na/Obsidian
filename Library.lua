@@ -6265,20 +6265,23 @@ do
                 desc.Anchored = true
             end
         end
-        -- Apply character offset matching the game's Viewport config
-        local CharOffset = CFrame.new(0, 0.025, 0.4)
+        -- Center character using bounding box (same technique as BuyMenu)
         pcall(function()
+            local bb, _ = CharModel:GetBoundingBox()
+            local offsetY = -bb.Y  -- move bounding box center to y=0
+            local cf = CFrame.new(0, offsetY, 0.4)
             if CharModel.PrimaryPart then
-                CharModel:SetPrimaryPartCFrame(CharOffset)
+                CharModel:SetPrimaryPartCFrame(cf)
             else
-                CharModel:PivotTo(CharOffset)
+                CharModel:PivotTo(cf)
             end
         end)
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
-        -- Camera offset from game's Viewport config: z=-8, rotated pi (facing the character)
-        PreviewCam.FieldOfView = UsingRealModel and 55 or 40
-        PreviewCam.CFrame = CFrame.new(0, 0.2, -8) * CFrame.Angles(0, math.pi, 0)
+        -- Camera at z=-5 (closer than game's z=-8) so character fills the box
+        -- y=0 centers on bounding box center; FOV=60 for good vertical fill
+        PreviewCam.FieldOfView = 60
+        PreviewCam.CFrame = CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
