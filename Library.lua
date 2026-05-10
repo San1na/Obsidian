@@ -6440,11 +6440,16 @@ do
             -- box size) so they stay the same distance from the box at any in-game range.
             local refW = self.RefW or 95
             local refH = self.RefH or 115
+            local outsideV = ry < 0 or ry > 1
             local px, py
             if rx < 0 then
                 px = boxX + rx * refW
             elseif rx > 1 then
                 px = boxX + boxW + (rx - 1) * refW
+            elseif outsideV then
+                -- Below/above box: fix pixel distance from box center so label
+                -- doesn't drift with box width at different in-game distances
+                px = boxX + boxW * 0.5 + (rx - 0.5) * refW
             else
                 px = boxX + rx * boxW
             end
