@@ -257,6 +257,7 @@ else
 end
 
 local Templates = {
+    --// UI \\-
     Frame = {
         BorderSizePixel = 0,
     },
@@ -6441,7 +6442,7 @@ do
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
         PreviewCam.FieldOfView = 50
-        PreviewCam.CFrame = CFrame.new(0, 0.2, -8) * CFrame.Angles(0, -math.pi, 0)
+        PreviewCam.CFrame = CFrame.new(0, 0.2, -6) * CFrame.Angles(0, -math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
@@ -6480,19 +6481,20 @@ do
             local bL, bT, bR, bB = bx, by, bx + bw, by + bh
             local gap = 2
 
-            local pushDown = LowerOnlyLabels[elIdx]
-            if pushDown then
-                if top < bB + gap then
+            local horizontalOverlap = right > bL and left < bR
+            local verticalOverlap = bottom > bT and top < bB
+            local intersects = horizontalOverlap and verticalOverlap
+
+            if LowerOnlyLabels[elIdx] then
+                if horizontalOverlap and top < bB + gap then
                     top = bB + gap
-                    y = top + th / 2
                 end
-            elseif right > bL and left < bR and bottom > bT and top < bB then
+            elseif intersects then
                 if (top + th / 2) < (bT + bh / 2) then
                     top = bT - gap - th
                 else
                     top = bB + gap
                 end
-                y = top + th / 2
             end
 
             lbl.Frame.Position = UDim2.fromOffset(
@@ -6592,9 +6594,6 @@ do
                 local ry = (ly - by) / bh
                 rx = math.clamp(rx, -2.5, 3.5)
                 ry = math.clamp(ry, -1.5, 2.5)
-                if LowerOnlyLabels[El.Idx] then
-                    ry = math.max(ry, 1.0)
-                end
                 Preview.Value[El.Idx].X = rx
                 Preview.Value[El.Idx].Y = ry
                 PositionLabel(El.Idx)
@@ -6621,11 +6620,7 @@ do
         function Preview:GetOffset(name)
             local v = self.Value[name]
             if not v then return 0.5, 0.5 end
-            local rx, ry = v.X, v.Y
-            if LowerOnlyLabels[name] and ry < 1.0 then
-                ry = 1.0
-            end
-            return rx, ry
+            return v.X, v.Y
         end
 
         function Preview:GetPosition(name, boxX, boxY, boxW, boxH)
