@@ -1,3 +1,4 @@
+-- 1
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -6247,14 +6248,16 @@ do
         local CharViewport = New("ViewportFrame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
-            Size = UDim2.fromScale(1, 1),
-            Position = UDim2.fromScale(0, 0),
+            Size = UDim2.fromScale(2, 2),
+            Position = UDim2.fromScale(-0.5, -0.5),
             ZIndex = 3,
             Parent = BoxFrame,
             LightDirection = Vector3.new(0.3, -0.8, -0.5),
             Ambient = Color3.fromRGB(160, 160, 170),
             LightColor = Color3.fromRGB(255, 252, 240),
+            ClipsDescendants = false,
         })
+        pcall(function() BoxFrame.ClipsDescendants = false end)
         local CharWorldModel = Instance.new("WorldModel")
         CharWorldModel.Parent = CharViewport
         local CharModel = TryGetTCharacter() or BuildFallbackDummy()
@@ -6442,7 +6445,7 @@ do
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
         PreviewCam.FieldOfView = 50
-        PreviewCam.CFrame = CFrame.new(0, 0.2, -6) * CFrame.Angles(0, -math.pi, 0)
+        PreviewCam.CFrame = CFrame.new(0, 0.6, -10) * CFrame.Angles(0, -math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
@@ -6481,16 +6484,15 @@ do
             local bL, bT, bR, bB = bx, by, bx + bw, by + bh
             local gap = 2
 
-            local horizontalOverlap = right > bL and left < bR
-            local verticalOverlap = bottom > bT and top < bB
-            local intersects = horizontalOverlap and verticalOverlap
+            local centerInsideX = x > bL and x < bR
+            local centerInsideY = y > bT and y < bB
 
             if LowerOnlyLabels[elIdx] then
-                if horizontalOverlap and top < bB + gap then
+                if centerInsideX and y < bB + gap then
                     top = bB + gap
                 end
-            elseif intersects then
-                if (top + th / 2) < (bT + bh / 2) then
+            elseif centerInsideX and centerInsideY then
+                if y < bT + bh / 2 then
                     top = bT - gap - th
                 else
                     top = bB + gap
