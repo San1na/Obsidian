@@ -1,4 +1,4 @@
--- 1
+-- 2
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -6472,36 +6472,43 @@ do
             if not lbl then return end
             local v = Preview.Value[elIdx]
             local bx, by, bw, bh = GetBoxRect()
-            local x = bx + v.X * bw
-            local y = by + v.Y * bh
+            local cx = bx + v.X * bw
+            local cy = by + v.Y * bh
             local sz = lbl.Frame.AbsoluteSize
             local tw, th = sz.X, sz.Y
-
-            local left = x - tw / 2
-            local top = y - th / 2
-            local right = left + tw
-            local bottom = top + th
             local bL, bT, bR, bB = bx, by, bx + bw, by + bh
             local gap = 2
+            local centerInsideX = cx > bL and cx < bR
+            local centerInsideY = cy > bT and cy < bB
 
-            local centerInsideX = x > bL and x < bR
-            local centerInsideY = y > bT and y < bB
-
-            if LowerOnlyLabels[elIdx] then
-                if centerInsideX and y < bB + gap then
-                    top = bB + gap
-                end
-            elseif centerInsideX and centerInsideY then
-                if y < bT + bh / 2 then
-                    top = bT - gap - th
+            if centerInsideX and centerInsideY then
+                if LowerOnlyLabels[elIdx] then
+                    cy = bB + gap + th / 2
+                elseif cy < (bT + bB) / 2 then
+                    cy = bT - gap - th / 2
                 else
-                    top = bB + gap
+                    cy = bB + gap + th / 2
+                end
+            elseif centerInsideX then
+                if cy <= bT and (cy + th / 2) > bT - gap then
+                    cy = bT - gap - th / 2
+                elseif cy >= bB and (cy - th / 2) < bB + gap then
+                    cy = bB + gap + th / 2
+                end
+                if LowerOnlyLabels[elIdx] and cy < bB + gap + th / 2 then
+                    cy = bB + gap + th / 2
+                end
+            elseif centerInsideY then
+                if cx <= bL and (cx + tw / 2) > bL - gap then
+                    cx = bL - gap - tw / 2
+                elseif cx >= bR and (cx - tw / 2) < bR + gap then
+                    cx = bR + gap + tw / 2
                 end
             end
 
             lbl.Frame.Position = UDim2.fromOffset(
-                math.floor(x - tw / 2),
-                math.floor(top)
+                math.floor(cx - tw / 2),
+                math.floor(cy - th / 2)
             )
         end
 
