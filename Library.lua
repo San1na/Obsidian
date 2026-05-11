@@ -257,7 +257,6 @@ else
 end
 
 local Templates = {
-    --// UI \\-
     Frame = {
         BorderSizePixel = 0,
     },
@@ -6260,27 +6259,189 @@ do
         local CharModel = TryGetTCharacter() or BuildFallbackDummy()
         local UsingRealModel = CharModel.Name ~= "PreviewDummy"
         CharModel.Parent = CharWorldModel
-        -- Anchor all parts (required for WorldModel display without physics)
-        for _, desc in ipairs(CharModel:GetDescendants()) do
-            if desc:IsA("BasePart") then
-                desc.Anchored = true
+
+        local function AnchorRootOnly(model)
+            local root = model.PrimaryPart
+                or model:FindFirstChild("HumanoidRootPart")
+                or model:FindFirstChild("Torso")
+                or model:FindFirstChild("UpperTorso")
+            for _, desc in ipairs(model:GetDescendants()) do
+                if desc:IsA("BasePart") then
+                    desc.Anchored = (desc == root)
+                    desc.CanCollide = false
+                    desc.CanQuery = false
+                    desc.CanTouch = false
+                    desc.Massless = true
+                end
+            end
+            if root and not model.PrimaryPart then
+                model.PrimaryPart = root
+            end
+            return root
+        end
+
+        local function AnchorAllParts(model)
+            for _, desc in ipairs(model:GetDescendants()) do
+                if desc:IsA("BasePart") then
+                    desc.Anchored = true
+                end
             end
         end
-        -- Position character: PivotTo uses PrimaryPart when set, bbox center otherwise
-        -- Both produce a known center at y=0 for the camera to look at
+
+        if UsingRealModel then
+            AnchorRootOnly(CharModel)
+        else
+            AnchorAllParts(CharModel)
+        end
+
         pcall(function()
+            local offset = CFrame.new(0, 0.025, 0.4)
             if CharModel.PrimaryPart then
-                CharModel:SetPrimaryPartCFrame(CFrame.new(0, 0, 0.4))
+                CharModel:SetPrimaryPartCFrame(offset)
             else
-                CharModel:PivotTo(CFrame.new(0, 0, 0.4))
+                CharModel:PivotTo(offset)
             end
         end)
+
+        local function AttachAK(charModel)
+            local rs = game:GetService("ReplicatedStorage")
+            local weaponsFolder = rs:FindFirstChild("Assets") and rs.Assets:FindFirstChild("Weapons")
+            if not weaponsFolder then return nil end
+            local akSrc = weaponsFolder:FindFirstChild("AK-47")
+            if not akSrc then return nil end
+            local baseModel = akSrc:FindFirstChild("Character") or akSrc
+            if not baseModel:IsA("Model") then return nil end
+
+            local weapon = baseModel:Clone()
+            weapon.Name = "AK-47"
+
+            if not weapon.PrimaryPart then
+                local insert = weapon:FindFirstChild("Insert", true)
+                if insert and insert:IsA("BasePart") then
+                    weapon.PrimaryPart = insert
+                end
+            end
+            if not weapon.PrimaryPart then
+                weapon:Destroy()
+                return nil
+            end
+
+            for _, p in ipairs(weapon:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.Anchored = false
+                    p.CanCollide = false
+                    p.CanQuery = false
+                    p.CanTouch = false
+                    p.Massless = true
+                end
+            end
+
+            local rightHand = charModel:FindFirstChild("RightHand")
+            if not rightHand then
+                weapon:Destroy()
+                return nil
+            end
+
+            weapon.Parent = charModel
+
+            local motor = Instance.new("Motor6D")
+            motor.Name = "WeaponAttachment"
+            motor.Part0 = rightHand
+            motor.Part1 = weapon.PrimaryPart
+
+            local props = weapon:FindFirstChild("Properties")
+            if not props then
+                local sub = weapon:FindFirstChild("Weapon")
+                if sub then props = sub:FindFirstChild("Properties") end
+            end
+            if not props then
+                props = weapon:FindFirstChild("Properties", true)
+            end
+            if props then
+                local c0 = props:FindFirstChild("C0")
+                if c0 then motor.C0 = c0.Value end
+                local c1 = props:FindFirstChild("C1")
+                if c1 then motor.C1 = c1.Value end
+            end
+            motor.Parent = rightHand
+            return weapon
+        end
+
+        local function PlayPreviewAnimations(charModel)
+            local hum = charModel:FindFirstChildOfClass("Humanoid")
+            if not hum then
+                hum = Instance.new("Humanoid")
+                hum.RequiresNeck = false
+                hum.HealthDisplayDistanceType = Enum.HumanoidHealthDisplayType.AlwaysOff
+                hum.NameDisplayDistance = 0
+                hum.Parent = charModel
+            end
+            pcall(function() hum.RequiresNeck = false end)
+            pcall(function() hum.HipHeight = 0 end)
+            pcall(function() hum.AutoRotate = false end)
+            local animator = hum:FindFirstChildOfClass("Animator")
+            if not animator then
+                animator = Instance.new("Animator")
+                animator.Parent = hum
+            end
+
+            pcall(function()
+                local idle = Instance.new("Animation")
+                idle.AnimationId = "rbxassetid://99540873384647"
+                local track = animator:LoadAnimation(idle)
+                track.Looped = true
+                track.Priority = Enum.AnimationPriority.Idle
+                track:Play()
+            end)
+
+            local function tryRifleAnim()
+                local rs = game:GetService("ReplicatedStorage")
+                local assets = rs:FindFirstChild("Assets")
+                local ui = assets and assets:FindFirstChild("UI")
+                local loadout = ui and ui:FindFirstChild("Loadout")
+                local anims = loadout and loadout:FindFirstChild("Animations")
+                local rifle = anims and anims:FindFirstChild("Rifle")
+                if rifle then
+                    local anim = rifle:FindFirstChild("AK-47") or rifle:FindFirstChild("Default")
+                    if anim and anim:IsA("Animation") then
+                        local track = animator:LoadAnimation(anim)
+                        track.Looped = true
+                        track.Priority = Enum.AnimationPriority.Action
+                        track:Play()
+                        return true
+                    end
+                end
+                return false
+            end
+
+            task.spawn(function()
+                for i = 1, 30 do
+                    local ok, done = pcall(tryRifleAnim)
+                    if ok and done then return end
+                    task.wait(0.5)
+                end
+            end)
+        end
+
+        if UsingRealModel then
+            task.spawn(function()
+                for i = 1, 30 do
+                    local rs = game:GetService("ReplicatedStorage")
+                    local weapons = rs:FindFirstChild("Assets") and rs.Assets:FindFirstChild("Weapons")
+                    local ak = weapons and weapons:FindFirstChild("AK-47")
+                    if ak and ak:FindFirstChild("Character") then
+                        pcall(function() AttachAK(CharModel) end)
+                        break
+                    end
+                    task.wait(0.5)
+                end
+            end)
+            pcall(function() PlayPreviewAnimations(CharModel) end)
+        end
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
-        -- z=-4 + FOV=72: visible height = 2*tan(36°)*4 = 5.82 studs
-        -- covers full R6 character (5 studs) centered at y=0 with room to spare
-        PreviewCam.FieldOfView = 65
-        PreviewCam.CFrame = CFrame.new(0, 0, -4) * CFrame.Angles(0, math.pi, 0)
+        PreviewCam.FieldOfView = 50
+        PreviewCam.CFrame = CFrame.new(0, 0.2, -8) * CFrame.Angles(0, -math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
@@ -6300,6 +6461,8 @@ do
 
         Preview.Labels = {}
 
+        local LowerOnlyLabels = { Weapon = true, Distance = true, WeaponIcon = true }
+
         local function PositionLabel(elIdx)
             local lbl = Preview.Labels[elIdx]
             if not lbl then return end
@@ -6308,9 +6471,33 @@ do
             local x = bx + v.X * bw
             local y = by + v.Y * bh
             local sz = lbl.Frame.AbsoluteSize
+            local tw, th = sz.X, sz.Y
+
+            local left = x - tw / 2
+            local top = y - th / 2
+            local right = left + tw
+            local bottom = top + th
+            local bL, bT, bR, bB = bx, by, bx + bw, by + bh
+            local gap = 2
+
+            local pushDown = LowerOnlyLabels[elIdx]
+            if pushDown then
+                if top < bB + gap then
+                    top = bB + gap
+                    y = top + th / 2
+                end
+            elseif right > bL and left < bR and bottom > bT and top < bB then
+                if (top + th / 2) < (bT + bh / 2) then
+                    top = bT - gap - th
+                else
+                    top = bB + gap
+                end
+                y = top + th / 2
+            end
+
             lbl.Frame.Position = UDim2.fromOffset(
-                math.floor(x - sz.X / 2),
-                math.floor(y - sz.Y / 2)
+                math.floor(x - tw / 2),
+                math.floor(top)
             )
         end
 
@@ -6405,6 +6592,9 @@ do
                 local ry = (ly - by) / bh
                 rx = math.clamp(rx, -2.5, 3.5)
                 ry = math.clamp(ry, -1.5, 2.5)
+                if LowerOnlyLabels[El.Idx] then
+                    ry = math.max(ry, 1.0)
+                end
                 Preview.Value[El.Idx].X = rx
                 Preview.Value[El.Idx].Y = ry
                 PositionLabel(El.Idx)
@@ -6431,7 +6621,11 @@ do
         function Preview:GetOffset(name)
             local v = self.Value[name]
             if not v then return 0.5, 0.5 end
-            return v.X, v.Y
+            local rx, ry = v.X, v.Y
+            if LowerOnlyLabels[name] and ry < 1.0 then
+                ry = 1.0
+            end
+            return rx, ry
         end
 
         function Preview:GetPosition(name, boxX, boxY, boxW, boxH)
