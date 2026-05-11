@@ -6445,7 +6445,7 @@ do
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
         PreviewCam.FieldOfView = 50
-        PreviewCam.CFrame = CFrame.new(0.2, 0.1, -10) * CFrame.Angles(0, -math.pi, 0)
+        PreviewCam.CFrame = CFrame.new(0.2, -0.2, -10) * CFrame.Angles(0, -math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
