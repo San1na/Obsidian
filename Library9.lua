@@ -1,4 +1,3 @@
--- 5
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -417,6 +416,7 @@ local Templates = {
         Values = {},
         DisabledValues = {},
         ValueImages = {},
+        LargeImages = false,
 
         Multi = false,
         MaxVisibleDropdownItems = 8,
@@ -4841,8 +4841,9 @@ do
                     ValueImage = { Url = string.format("rbxthumb://type=AvatarHeadShot&id=%s&w=48&h=48", tostring(Value.UserId)) }
                 end
             else
-                if Info.ValueImages and Info.ValueImages[Value] then
-                    ValueImage = Library:GetCustomIcon(Info.ValueImages[Value])
+                local imgs = Dropdown.ValueImages or Info.ValueImages
+                if imgs and imgs[Value] then
+                    ValueImage = Library:GetCustomIcon(imgs[Value])
                 end
             end
 
@@ -4872,7 +4873,8 @@ do
         Dropdown.Menu = MenuTable
 
         function Dropdown:RecalculateListSize(Count)
-            local Y = math.clamp((Count or GetTableSize(Dropdown.Values)) * 21, 0, Info.MaxVisibleDropdownItems * 21)
+            local RowHeight = Info.LargeImages and 48 or 21
+            local Y = math.clamp((Count or GetTableSize(Dropdown.Values)) * RowHeight, 0, Info.MaxVisibleDropdownItems * RowHeight)
 
             MenuTable:SetSize(function()
                 return UDim2.fromOffset((DisplayContainer.AbsoluteSize.X / Library.DPIScale) + 1, Y)
@@ -4981,12 +4983,19 @@ do
                 local IsDisabled = table.find(DisabledValues, Value)
                 local Table = {}
                 local ValueImage = GetValueImage(Value)
+                local Large = Info.LargeImages == true
+
+                local RowH = Large and 48 or 21
+                local ImgW = Large and 56 or 16
+                local ImgH = Large and 36 or 16
+                local ImgPad = Large and 6 or 4
+                local TextStart = Large and (ImgW + ImgPad * 2) or 18
 
                 local Container = New("Frame", {
                     BackgroundColor3 = "MainColor",
                     BackgroundTransparency = 1,
                     LayoutOrder = IsDisabled and 1 or 0,
-                    Size = UDim2.new(1, 0, 0, 21),
+                    Size = UDim2.new(1, 0, 0, RowH),
                     Parent = MenuTable.Menu,
                 })
 
@@ -4996,15 +5005,16 @@ do
                     ImageRectOffset = ValueImage.ImageRectOffset,
                     ImageRectSize = ValueImage.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.fromOffset(16, 16),
-                    Position = UDim2.fromOffset(4, 3),
+                    ScaleType = Large and Enum.ScaleType.Fit or Enum.ScaleType.Stretch,
+                    Size = UDim2.fromOffset(ImgW, ImgH),
+                    Position = UDim2.fromOffset(ImgPad, math.floor((RowH - ImgH) / 2)),
                     Parent = Container,
                 })
 
                 local Button = New("TextButton", {
                     BackgroundTransparency = 1,
-                    Size = ValueImage and UDim2.new(1, -18, 0, 21) or UDim2.new(1, 0, 0, 21),
-                    Position = ValueImage and UDim2.fromOffset(18, 0) or UDim2.fromOffset(0, 0),
+                    Size = ValueImage and UDim2.new(1, -TextStart, 0, RowH) or UDim2.new(1, 0, 0, RowH),
+                    Position = ValueImage and UDim2.fromOffset(TextStart, 0) or UDim2.fromOffset(0, 0),
                     Text = FormattedValue,
                     TextSize = 14,
                     TextTransparency = 0.5,
@@ -6445,7 +6455,7 @@ do
         local PreviewCam = Instance.new("Camera")
         PreviewCam.CameraType = Enum.CameraType.Scriptable
         PreviewCam.FieldOfView = 50
-        PreviewCam.CFrame = CFrame.new(0.2, -0.35, -12) * CFrame.Angles(0, -math.pi, 0)
+        PreviewCam.CFrame = CFrame.new(0.2, 0.3, -10) * CFrame.Angles(0, -math.pi, 0)
         PreviewCam.Parent = CharViewport
         CharViewport.CurrentCamera = PreviewCam
 
