@@ -1,3 +1,4 @@
+-- f
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -416,6 +417,7 @@ local Templates = {
         Values = {},
         DisabledValues = {},
         ValueImages = {},
+        LargeImages = false,
 
         Multi = false,
         MaxVisibleDropdownItems = 8,
@@ -1052,13 +1054,22 @@ type IconModule = {
 }
 
 local FetchIcons, Icons = pcall(function()
-    return (loadstring(
-        game:HttpGet("https://raw.githubusercontent.com/San1na/lucide-roblox-direct/refs/heads/main/source.lua")
-    ) :: () -> IconModule)()
+    local url = "https://raw.githubusercontent.com/San1na/lucide-roblox-direct/refs/heads/main/source.lua"
+    local body
+    if type(request) == "function" then
+        local ok, r = pcall(request, {Url = url, Method = "GET"})
+        if ok and r and r.Body then body = r.Body end
+    end
+    if not body and type(http) == "table" and type(http.request) == "function" then
+        local ok, r = pcall(http.request, {Url = url, Method = "GET"})
+        if ok and r and r.Body then body = r.Body end
+    end
+    if not body then body = game:HttpGet(url) end
+    return (loadstring(body, "LucideIcons") :: () -> IconModule)()
 end)
 
 function Library:GetIcon(IconName: string)
-    if not FetchIcons then
+    if not FetchIcons or type(Icons) ~= "table" or typeof(Icons.GetAsset) ~= "function" then
         return
     end
 
@@ -4840,8 +4851,9 @@ do
                     ValueImage = { Url = string.format("rbxthumb://type=AvatarHeadShot&id=%s&w=48&h=48", tostring(Value.UserId)) }
                 end
             else
-                if Info.ValueImages and Info.ValueImages[Value] then
-                    ValueImage = Library:GetCustomIcon(Info.ValueImages[Value])
+                local imgs = Dropdown.ValueImages or Info.ValueImages
+                if imgs and imgs[Value] then
+                    ValueImage = Library:GetCustomIcon(imgs[Value])
                 end
             end
 
@@ -4871,7 +4883,8 @@ do
         Dropdown.Menu = MenuTable
 
         function Dropdown:RecalculateListSize(Count)
-            local Y = math.clamp((Count or GetTableSize(Dropdown.Values)) * 21, 0, Info.MaxVisibleDropdownItems * 21)
+            local RowHeight = Info.LargeImages and 48 or 21
+            local Y = math.clamp((Count or GetTableSize(Dropdown.Values)) * RowHeight, 0, Info.MaxVisibleDropdownItems * RowHeight)
 
             MenuTable:SetSize(function()
                 return UDim2.fromOffset((DisplayContainer.AbsoluteSize.X / Library.DPIScale) + 1, Y)
@@ -4980,12 +4993,19 @@ do
                 local IsDisabled = table.find(DisabledValues, Value)
                 local Table = {}
                 local ValueImage = GetValueImage(Value)
+                local Large = Info.LargeImages == true
+
+                local RowH = Large and 48 or 21
+                local ImgW = Large and 56 or 16
+                local ImgH = Large and 36 or 16
+                local ImgPad = Large and 6 or 4
+                local TextStart = Large and (ImgW + ImgPad * 2) or 18
 
                 local Container = New("Frame", {
                     BackgroundColor3 = "MainColor",
                     BackgroundTransparency = 1,
                     LayoutOrder = IsDisabled and 1 or 0,
-                    Size = UDim2.new(1, 0, 0, 21),
+                    Size = UDim2.new(1, 0, 0, RowH),
                     Parent = MenuTable.Menu,
                 })
 
@@ -4995,15 +5015,16 @@ do
                     ImageRectOffset = ValueImage.ImageRectOffset,
                     ImageRectSize = ValueImage.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.fromOffset(16, 16),
-                    Position = UDim2.fromOffset(4, 3),
+                    ScaleType = Large and Enum.ScaleType.Fit or Enum.ScaleType.Stretch,
+                    Size = UDim2.fromOffset(ImgW, ImgH),
+                    Position = UDim2.fromOffset(ImgPad, math.floor((RowH - ImgH) / 2)),
                     Parent = Container,
                 })
 
                 local Button = New("TextButton", {
                     BackgroundTransparency = 1,
-                    Size = ValueImage and UDim2.new(1, -18, 0, 21) or UDim2.new(1, 0, 0, 21),
-                    Position = ValueImage and UDim2.fromOffset(18, 0) or UDim2.fromOffset(0, 0),
+                    Size = ValueImage and UDim2.new(1, -TextStart, 0, RowH) or UDim2.new(1, 0, 0, RowH),
+                    Position = ValueImage and UDim2.fromOffset(TextStart, 0) or UDim2.fromOffset(0, 0),
                     Text = FormattedValue,
                     TextSize = 14,
                     TextTransparency = 0.5,
