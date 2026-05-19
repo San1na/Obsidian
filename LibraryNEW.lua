@@ -6155,7 +6155,6 @@ do
         local function GetBoxRect()
             local cw = math.max(Canvas.AbsoluteSize.X, 1)
             local ch = math.max(Canvas.AbsoluteSize.Y, 1)
-            -- Real ESP box ratio: character hitbox is 4w x 4.8h studs = 0.833
             local bh = math.clamp(ch * 0.46, 75, 115)
             local bw = math.clamp(math.floor(bh * 0.833), 60, 100)
             local bx = (cw - bw) / 2
@@ -6163,7 +6162,6 @@ do
             return bx, by, bw, bh
         end
 
-        --// Try to clone real BloxStrike T character from ReplicatedStorage \\--
         local function BuildFallbackDummy()
             local model = Instance.new("Model")
             model.Name = "PreviewDummy"
@@ -6196,7 +6194,6 @@ do
             local model = nil
             pcall(function()
                 local RS = game:GetService("ReplicatedStorage")
-                -- Method 1: via the game's own Viewport config (same path used by Loadout/BuyMenu)
                 local ok, viewCfg = pcall(require, RS.Database.Custom.GameStats.Character.Viewport)
                 if ok and viewCfg then
                     local tConf = viewCfg.VIEWPORT_CHARACTER_CONFIG and viewCfg.VIEWPORT_CHARACTER_CONFIG["T"]
@@ -6205,7 +6202,6 @@ do
                         if src then model = src:Clone(); return end
                     end
                 end
-                -- Method 2: iterate Assets.Characters, prefer non-CT models
                 local chars = RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild("Characters")
                 if chars then
                     for _, ch in ipairs(chars:GetChildren()) do
@@ -6220,7 +6216,6 @@ do
             return model
         end
 
-        --// 2D Box matching real ESP structure \\--
         local BoxOutlineFrame = New("Frame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -6264,7 +6259,6 @@ do
         BoxGradient.Enabled = false
         BoxGradient.Parent = BoxStroke
 
-        --// ViewportFrame with real BloxStrike T character (WorldModel approach) \\--
         local CharViewport = New("ViewportFrame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -6654,8 +6648,6 @@ do
 
         function Preview:GetPosition(name, boxX, boxY, boxW, boxH)
             local rx, ry = self:GetOffset(name)
-            -- Outside-box labels use a fixed pixel offset (based on the preview reference
-            -- box size) so they stay the same distance from the box at any in-game range.
             local refW = self.RefW or 95
             local refH = self.RefH or 115
             local outsideV = ry < 0 or ry > 1
@@ -6665,8 +6657,6 @@ do
             elseif rx > 1 then
                 px = boxX + boxW + (rx - 1) * refW
             elseif outsideV then
-                -- Below/above box: fix pixel distance from box center so label
-                -- doesn't drift with box width at different in-game distances
                 px = boxX + boxW * 0.5 + (rx - 0.5) * refW
             else
                 px = boxX + rx * boxW
